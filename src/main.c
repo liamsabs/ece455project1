@@ -26,13 +26,14 @@ static void GPIO_Setup( void );
  * The queue send and receive tasks as described in the comments at the top of
  * this file.
  */
-static void Manager_Task( void *pvParameters );
+//static void Manager_Task( void *pvParameters );
 
 xQueueHandle xQueue_handle = 0;
 
 void led_init( void );
 void led_data( unsigned char data );
 void adc_initialize( void );
+void traffic_lights( int traffic_flow );
 void status_toggle( void );
 uint16_t adc_convert( void );
 
@@ -46,7 +47,7 @@ int main(void)
 {
 
 
-	adc_initialize ();
+	adc_initialize();
 	//led_init();
 
 	/* Configure the system ready to run the demo.  The clock configuration
@@ -54,20 +55,45 @@ int main(void)
 	prvSetupHardware();
 	GPIO_Setup();
 
-	int count = 0;
-		while(1){
-			if(count > 4800000){
-				printf("ADC Value is: %u \n", (unsigned int)ADC_GetConversionValue(ADC1));
-				count = 0;
-			}
-			count++;
+	//int traffic_flow = 2;
+
+	// ADC Testing Function
+//	int count = 0;
+//	while(1){
+//		if(count > 4800000){
+//			printf("ADC Value is: %u \n", (unsigned int)ADC_GetConversionValue(ADC1));
+//			count = 0;
+//		}
+//		count++;
+//	}
+
+
+//	xTaskCreate( Manager_Task, "Manager", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
+//
+//	/* Start the tasks and timer running. */
+//	vTaskStartScheduler();
+	uint16_t ADC_Value;
+	GPIOC->ODR |= GPIO_ODR_ODR_0;
+	GPIOC->ODR |= GPIO_ODR_ODR_1;
+	GPIOC->ODR |= GPIO_ODR_ODR_2;
+	GPIOC->ODR |= GPIO_ODR_ODR_6;
+	GPIOC->ODR |= GPIO_ODR_ODR_9;
+	for(int i = 0; i < 19; i++){
+
+				GPIO_ToggleBits(GPIOC, GPIO_Pin_8);
+				GPIO_ToggleBits(GPIOC, GPIO_Pin_8);
+				if((i+2) % 5 == 0) GPIO_ToggleBits(GPIOC, GPIO_Pin_6);
+	}
+
+	while(1){
+
+		ADC_SoftwareStartConv(ADC1);
+		while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC))
+		{
+			ADC_Value = ADC_GetConversionValue(ADC1);
 		}
-
-
-	xTaskCreate( Manager_Task, "Manager", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
-
-	/* Start the tasks and timer running. */
-	vTaskStartScheduler();
+		printf("ADC Value: %d\n", (int)ADC_Value);
+	}
 
 	return 0;
 }
@@ -75,81 +101,128 @@ int main(void)
 
 /*-----------------------------------------------------------*/
 
-static void Manager_Task( void *pvParameters )
-{
-//
-// Display mode range 1 to 3
-//
-	uint16_t mode = 1;
-
-	uint16_t counter = 0;
-	uint16_t delay = 0;
-
-	uint16_t adc_data = 0;
-
-	while(1)
-	{
-		adc_data = adc_convert() / 409;
-		if ( adc_data >= 10 )
-		{
-			adc_data = 9;
-		}
-
-
-		if ( mode == 1 )
-		{
-			status_toggle();
-			delay = 250;
-			led_data( digits[counter] );
-		}
-		else if ( mode == 2 )
-		{
-			delay = 250;
-			led_data( digits[adc_data] );
-		}
-		else
-		{
-			delay = (100*adc_data) + 100;
-			led_data( digits[counter] );
-		}
-
-		counter = counter + 1;
-		if ( counter >= 10 )
-		{
-			counter = 0;
-		}
-
-
-		vTaskDelay( delay );
-	}
-}
-
-/*-----------------------------------------------------------*/
-
-void adc_initialize( void ){
-
-	ADC_InitTypeDef ADCInit_Structure;
-	ADC_StructInit(&ADCInit_Structure);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE); // Enables the ADC1 Clock
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE); // Enables the clock for the ADC1 GPIOA
-	ADC_Init(ADC1, &ADCInit_Structure); // Enables and configures the prescaler, unsure if these are the correct values
-	ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_3Cycles);
-	ADC_Cmd(ADC1, ENABLE); // Activates the ADC peripheral
-
-
-	// Can then use _GetMultiModeConversionValue() to get the value
-
-}
-
-/*-----------------------------------------------------------*/
-
-//void led_init( void ){
+//static void Manager_Task( void *pvParameters )
+//{
 //
 //}
 
 /*-----------------------------------------------------------*/
 
-//void led_data( unsigned char data ){
+static void prvSetupHardware( void )
+{
+	/* Ensure all priority bits are assigned as preemption priority bits.
+	http://www.freertos.org/RTOS-Cortex-M3-M4.html */
+	NVIC_SetPriorityGrouping( 0 );
+
+	/* TODO: Setup the clocks, etc. here, if they were not configured before
+	main() was called. */
+
+
+//	// Disable the PLL
+//	RCC->CR &= ~(RCC_CR_PLLON);
+//	// Wait for the PLL to unlock
+//	while (!( RCC->CR & RCC_CR_PLLRDY ));
+
+//	RCC->CFGR 	|= RCC_CFGR_PLLSRC;
+
+	// Configure the PLL for 48-MHz system clock
+	RCC->CFGR = 0x00280000;
+	// Enable the PLL
+	RCC->CR |= RCC_CR_PLLON;
+
+	while (!( RCC->CR & RCC_CR_PLLRDY ));
+	RCC->CFGR 	|= RCC_CFGR_SW_PLL;
+	while (!(RCC->CFGR & RCC_CFGR_SWS_PLL))
+
+//	// Wait for the PLL to lock
+//	while (( RCC->CR & RCC_CR_PLLRDY ) != RCC_CR_PLLRDY );
+//	// Switch the processor to the PLL clock source
+//	RCC->CFGR = ( RCC->CFGR & (~RCC_CFGR_SW)) | RCC_CFGR_SW_PLL;
+
+	// Update the system with the new clock frequency
+	SystemCoreClockUpdate();
+
+
+	/* Enable clock for TIM2 peripheral */
+	// Relevant register: RCC->APB1ENR (Defined as TIM2CLK)
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+}
+
+/*-----------------------------------------------------------*/
+
+static void GPIO_Setup( void )
+{
+	// Enable GPIOA & GPIOB Clock
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+
+	// Setting up PC0 as output (Red traffic light)
+	GPIOC->MODER |= GPIO_MODER_MODER0_0; // Output
+	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR0); //Pull-up Disabled
+
+	// Setting up PC1 as output (Amber traffic light)
+	GPIOC->MODER |= GPIO_MODER_MODER1_0; // Output
+	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR1); //Pull-up Disabled
+
+	// Setting up PC2 as output (Green traffic light)
+	GPIOC->MODER |= GPIO_MODER_MODER2_0; // Output
+	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR2); //Pull-up Disabled
+
+	// Setting up PC3 as input (Potentiometer)
+	GPIOC->MODER |= GPIO_MODER_MODER3; //analog mode
+	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR3); // Pull-up Disabled
+
+	// Setting up PC6 as output (Shift register data)
+	GPIOC->MODER |= GPIO_MODER_MODER6_0; // Output
+	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR6); //Pull-up Disabled
+
+	// Setting up PC8 as output (Shift register clock)
+	GPIOC->MODER |= GPIO_MODER_MODER8_0; // Output
+	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR8); // Pull-up Disabled
+
+	// Setting up PC9 as output (Shift register reset)
+	GPIOC->MODER |= GPIO_MODER_MODER9_0; // Output
+	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR9); // Pull-up Disabled
+}
+
+/*-----------------------------------------------------------*/
+
+void adc_initialize( void )
+{
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE); // Enables the ADC1 Clock
+	ADC_InitTypeDef ADCInit_Structure; // Initialize ADC Init Struct
+	ADC_StructInit(&ADCInit_Structure); // Provide Default Configurations
+	ADC_Init(ADC1, &ADCInit_Structure); // Enables and configures the prescaler, unsure if these are the correct values
+	ADC_Cmd(ADC1, ENABLE); // Activates the ADC peripheral
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_13, 1, ADC_SampleTime_144Cycles); // Sets it to channel 0
+}
+
+/*-----------------------------------------------------------*/
+
+void traffic_lights( int traffic_flow )
+{
+	GPIOC->ODR |= GPIO_ODR_ODR_0; // example of how to output to the LED
+	GPIOC->ODR |= GPIO_ODR_ODR_1;
+	GPIOC->ODR |= GPIO_ODR_ODR_2;
+
+	GPIOC->ODR |= GPIO_ODR_ODR_6;
+	GPIOC->ODR |= GPIO_ODR_ODR_8;
+	GPIOC->ODR |= GPIO_ODR_ODR_9;
+
+
+}
+
+/*-----------------------------------------------------------*/
+
+//void led_init( void )
+//{
+//
+//}
+
+/*-----------------------------------------------------------*/
+
+//void led_data( unsigned char data )
+//{
 //
 //}
 
@@ -162,7 +235,7 @@ void vApplicationMallocFailedHook( void )
 
 	Called if a call to pvPortMalloc() fails because there is insufficient
 	free memory available in the FreeRTOS heap.  pvPortMalloc() is called
-	internally by FreeRTOS API functions that create tasks, queues, software 
+	internally by FreeRTOS API functions that create tasks, queues, software
 	timers, and semaphores.  The size of the FreeRTOS heap is set by the
 	configTOTAL_HEAP_SIZE configuration constant in FreeRTOSConfig.h. */
 	for( ;; );
@@ -204,94 +277,3 @@ volatile size_t xFreeStackSpace;
 	}
 }
 /*-----------------------------------------------------------*/
-
-static void prvSetupHardware( void )
-{
-	/* Ensure all priority bits are assigned as preemption priority bits.
-	http://www.freertos.org/RTOS-Cortex-M3-M4.html */
-	NVIC_SetPriorityGrouping( 0 );
-
-	/* TODO: Setup the clocks, etc. here, if they were not configured before
-	main() was called. */
-
-
-	// Disable the PLL
-	RCC->CR &= ~(RCC_CR_PLLON);
-	// Wait for the PLL to unlock
-	while (!( RCC->CR & RCC_CR_PLLRDY ));
-
-
-	// Configure the PLL for 48-MHz system clock
-	RCC->CFGR = 0x00280000;
-	// Enable the PLL
-	RCC->CR |= RCC_CR_PLLON;
-	// Wait for the PLL to lock
-	while (( RCC->CR & RCC_CR_PLLRDY ) != RCC_CR_PLLRDY );
-	// Switch the processor to the PLL clock source
-	RCC->CFGR = ( RCC->CFGR & (~RCC_CFGR_SW)) | RCC_CFGR_SW_PLL;
-	// Update the system with the new clock frequency
-	SystemCoreClockUpdate();
-
-
-	/* Enable clock for TIM2 peripheral */
-	// Relevant register: RCC->APB1ENR (Defined as TIM2CLK)
-	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-
-}
-
-static void GPIO_Setup( void )
-{
-	// Enable GPIOA Clock
-	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-	// Enable GPIOC Clock
-	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
-
-	// Setting up PA0 as analog high-speed input (For ADC)
-	// Relevant register: GPIOA->MODER (Defined as PA0Mode)
-	GPIOA->MODER |= GPIO_MODER_MODER0;
-	GPIOA->MODER |= (GPIO_MODER_MODER0_0 | GPIO_MODER_MODER0_1); // Setting it to 0x11 for analog mode
-	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR0);
-
-
-	// Setting up PC0 as output (Red traffic light)
-	// Relevant register: GPIOC->MODER (Defined as PC0Mode)
-	GPIOC->MODER |= GPIO_MODER_MODER0;
-	GPIOC->MODER &= ~(GPIO_MODER_MODER0); // Setting it to output mode
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR0);
-
-	// Setting up PC1 as output (Amber traffic light)
-	// Relevant register: GPIOC->MODER (Defined as PC0Mode)
-	GPIOC->MODER |= GPIO_MODER_MODER1;
-	GPIOC->MODER &= ~(GPIO_MODER_MODER1); // Setting it to output mode
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR1);
-
-	// Setting up PC2 as output (Green traffic light)
-	// Relevant register: GPIOC->MODER (Defined as PC0Mode)
-	GPIOC->MODER |= GPIO_MODER_MODER2;
-	GPIOC->MODER &= ~(GPIO_MODER_MODER2); // Setting it to output mode
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR2);
-
-	// Setting up PC3 as input (Potentiometer)
-	// Relevant register: GPIOC->MODER (Defined as PC0Mode)
-	GPIOC->MODER |= GPIO_MODER_MODER3;
-	GPIOC->MODER &= ~(GPIO_MODER_MODER3); // Setting it to Input mode <--- might not be correct!
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR3);
-
-	// Setting up PC6 as output (Shift register data)
-	// Relevant register: GPIOC->MODER (Defined as PC0Mode)
-	GPIOC->MODER |= GPIO_MODER_MODER6;
-	GPIOC->MODER &= ~(GPIO_MODER_MODER6); // Setting it to output mode
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR6);
-
-	// Setting up PC7 as output (Shift register clock)
-	// Relevant register: GPIOC->MODER (Defined as PC0Mode)
-	GPIOC->MODER |= GPIO_MODER_MODER7;
-	GPIOC->MODER &= ~(GPIO_MODER_MODER7); // Setting it to output mode
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR7);
-
-	// Setting up PC8 as output (Shift register reset)
-	// Relevant register: GPIOC->MODER (Defined as PC0Mode)
-	GPIOC->MODER |= GPIO_MODER_MODER8;
-	GPIOC->MODER &= ~(GPIO_MODER_MODER8); // Setting it to output mode
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR8);
-}
