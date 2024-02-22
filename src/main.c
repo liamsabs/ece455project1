@@ -267,7 +267,6 @@ static void GPIO_Setup( void )
 
 	// Setting up PC2 as output (Green traffic light)
 	// Relevant register: GPIOC->MODER (Defined as PC0Mode)
-	GPIOC->MODER |= GPIO_MODER_MODER2;
 	GPIOC->MODER &= ~(GPIO_MODER_MODER2); // Setting it to output mode
 	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR2);
 
