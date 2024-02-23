@@ -20,7 +20,6 @@
  * that was not already performed before main() was called.
  */
 static void prvSetupHardware( void );
-static void GPIO_Setup( void );
 
 /*
  * The queue send and receive tasks as described in the comments at the top of
@@ -37,41 +36,23 @@ uint16_t adc_convert( void );
 
 void delay( uint16_t delay_duration );
 
-unsigned char digits[10] = { 0x3f, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F };
-
 /*-----------------------------------------------------------*/
 
 int main(void)
 {
-
-
-	adc_initialize();
-	//led_init();
-
 	/* Configure the system ready to run the demo.  The clock configuration
 	can be done here if it was not done before main() was called. */
 	prvSetupHardware();
-	GPIO_Setup();
 
-	//float traffic_flow = 2;
-
-	// ADC Testing Function
-//	int count = 0;
-//	while(1){
-//		if(count > 4800000){
-//			printf("ADC Value is: %u \n", (unsigned int)ADC_GetConversionValue(ADC1));
-//			count = 0;
-//		}
-//		count++;
-//	}
+	
 
 
-//	xTaskCreate( Manager_Task, "Manager", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
-//
+
+
+xTaskCreate( Manager_Task, "Manager", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
+
 //	/* Start the tasks and timer running. */
-//	vTaskStartScheduler();
-
-
+vTaskStartScheduler();
 	uint16_t ADC_Value;
 	GPIOC->ODR |= GPIO_ODR_ODR_0;
 	GPIOC->ODR |= GPIO_ODR_ODR_1;
@@ -110,91 +91,11 @@ int main(void)
 
 static void prvSetupHardware( void )
 {
-	/* Ensure all priority bits are assigned as preemption priority bits.
-	http://www.freertos.org/RTOS-Cortex-M3-M4.html */
-	NVIC_SetPriorityGrouping( 0 );
-
-	/* TODO: Setup the clocks, etc. here, if they were not configured before
-	main() was called. */
-
-
-//	// Disable the PLL
-//	RCC->CR &= ~(RCC_CR_PLLON);
-//	// Wait for the PLL to unlock
-//	while (!( RCC->CR & RCC_CR_PLLRDY ));
-
-//	RCC->CFGR 	|= RCC_CFGR_PLLSRC;
-
-	// Configure the PLL for 48-MHz system clock
-	RCC->CFGR = 0x00280000;
-	// Enable the PLL
-	RCC->CR |= RCC_CR_PLLON;
-
-	while (!( RCC->CR & RCC_CR_PLLRDY ));
-	RCC->CFGR 	|= RCC_CFGR_SW_PLL;
-	while (!(RCC->CFGR & RCC_CFGR_SWS_PLL))
-
-//	// Wait for the PLL to lock
-//	while (( RCC->CR & RCC_CR_PLLRDY ) != RCC_CR_PLLRDY );
-//	// Switch the processor to the PLL clock source
-//	RCC->CFGR = ( RCC->CFGR & (~RCC_CFGR_SW)) | RCC_CFGR_SW_PLL;
-
-	// Update the system with the new clock frequency
-	SystemCoreClockUpdate();
-
-
-	/* Enable clock for TIM2 peripheral */
-	// Relevant register: RCC->APB1ENR (Defined as TIM2CLK)
-	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-
-}
-
-/*-----------------------------------------------------------*/
-
-static void GPIO_Setup( void )
-{
-	// Enable GPIOA & GPIOB Clock
-	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
-
-	// Setting up PC0 as output (Red traffic light)
-	GPIOC->MODER |= GPIO_MODER_MODER0_0; // Output
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR0); //Pull-up Disabled
-
-	// Setting up PC1 as output (Amber traffic light)
-	GPIOC->MODER |= GPIO_MODER_MODER1_0; // Output
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR1); //Pull-up Disabled
-
-	// Setting up PC2 as output (Green traffic light)
-	GPIOC->MODER |= GPIO_MODER_MODER2_0; // Output
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR2); //Pull-up Disabled
-
-	// Setting up PC3 as input (Potentiometer)
-	GPIOC->MODER |= GPIO_MODER_MODER3; //analog mode
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR3); // Pull-up Disabled
-
-	// Setting up PC6 as output (Shift register data)
-	GPIOC->MODER |= GPIO_MODER_MODER6_0; // Output
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR6); //Pull-up Disabled
-
-	// Setting up PC8 as output (Shift register clock)
-	GPIOC->MODER |= GPIO_MODER_MODER8_0; // Output
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR8); // Pull-up Disabled
-
-	// Setting up PC9 as output (Shift register reset)
-	GPIOC->MODER |= GPIO_MODER_MODER9_0; // Output
-	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR9); // Pull-up Disabled
-}
-
-/*-----------------------------------------------------------*/
-
-void adc_initialize( void )
-{
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE); // Enables the ADC1 Clock
-	ADC_InitTypeDef ADCInit_Structure; // Initialize ADC Init Struct
-	ADC_StructInit(&ADCInit_Structure); // Provide Default Configurations
-	ADC_Init(ADC1, &ADCInit_Structure); // Enables and configures the prescaler, unsure if these are the correct values
-	ADC_Cmd(ADC1, ENABLE); // Activates the ADC peripheral
-	ADC_RegularChannelConfig(ADC1, ADC_Channel_13, 1, ADC_SampleTime_144Cycles); // Sets it to channel 0
+	 //http://www.freertos.org/RTOS-Cortex-M3-M4.html 
+	NVIC_SetPriorityGrouping( 0 ); // Ensure all priority bits are assigned as preemption priority bits.
+	GPIOInit(); // GPIO Initialization
+	ADCInit(); // ADC Initialization
+	SystemCoreClockUpdate(); // Update the system with the new clock frequency
 }
 
 /*-----------------------------------------------------------*/
