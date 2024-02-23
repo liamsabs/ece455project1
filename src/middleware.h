@@ -16,10 +16,10 @@ typedef enum {
 } LightState;
 
 // struct to hold state of whole system
-struct SystemState {
+typedef struct {
     LightState lightState;
     uint32_t trafficState;
-};
+} SystemState;
 
 // Defines for Traffic Lights
 #define LIGHT_RED GPIO_ODR_ODR_0
@@ -37,7 +37,7 @@ struct SystemState {
 void ADCInit( void );
 void GPIOInit( void );
 uint16_t readPot ( void );
-void updateTrafficLight ( struct SystemState* state );
-void updateTraffic ( struct SystemState* state );
+void updateTrafficLight ( SystemState* state );
+void updateTraffic ( SystemState* state );
 
 #endif
