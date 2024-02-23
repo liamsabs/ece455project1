@@ -53,7 +53,7 @@ uint16_t readPot (void)
     return ADC_Value; // return value read by ADC 
 }
 
-void updateTrafficLight (struct SystemState* state)
+void updateTrafficLight ( SystemState* state )
 {
     switch (state->lightState)
     {
@@ -69,7 +69,7 @@ void updateTrafficLight (struct SystemState* state)
     }   
 }
 
-void updateTraffic (struct SystemState* state)
+void updateTraffic ( SystemState* state )
 {
     uint32_t trafficShiftMask = TRAFFIC_START_MASK;
     for(int i = 0; i < 19; i++)

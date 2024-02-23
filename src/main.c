@@ -1,4 +1,3 @@
-
 /* Standard includes. */
 #include <stdint.h>
 #include <stdio.h>
@@ -15,8 +14,29 @@
 /* src includes*/
 #include "middleware.h"
 #include "utilities.h"
-/*-----------------------------------------------------------*/
 
+/* free RTOS template code utilised and found at: https://www.freertos.org/Hardware-independent-RTOS-example.html*/
+
+/*-----------------------------------------------------------*/
+/* Priorities at which the tasks are created.  The event semaphore task is
+given the maximum priority of ( configMAX_PRIORITIES - 1 ) to ensure it runs as
+soon as the semaphore is given. */
+#define mainQUEUE_RECEIVE_TASK_PRIORITY     ( tskIDLE_PRIORITY + 2 )
+#define mainQUEUE_SEND_TASK_PRIORITY        ( tskIDLE_PRIORITY + 1 )
+#define mainEVENT_SEMAPHORE_TASK_PRIORITY   ( configMAX_PRIORITIES - 1 )
+
+/* The rate at which data is sent to the queue, specified in milliseconds, and
+converted to ticks using the pdMS_TO_TICKS() macro. */
+#define mainQUEUE_SEND_PERIOD_MS            pdMS_TO_TICKS( 200 )
+
+/* The period of the example software timer, specified in milliseconds, and
+converted to ticks using the pdMS_TO_TICKS() macro. */
+#define mainSOFTWARE_TIMER_PERIOD_MS        pdMS_TO_TICKS( 1000 )
+
+/* The number of items the queue can hold.  This is 1 as the receive task
+has a higher priority than the send task, so will remove items as they are added,
+meaning the send task should always find the queue empty. */
+#define mainQUEUE_LENGTH                    ( 1 )
 /*-----------------------------------------------------------*/
 
 // Middleware Setup
@@ -24,7 +44,35 @@ static void prvSetupHardware( void );
 
 /*-----------------------------------------------------------*/
 
-// Defining Tasks
+/*
+ * The queue send and receive tasks as described in the comments at the top of
+ * this file.
+ */
+static void prvQueueReceiveTask( void *pvParameters );
+static void prvQueueSendTask( void *pvParameters );
+static void vExampleTimerCallback( TimerHandle_t xTimer );
+static void prvEventSemaphoreTask( void *pvParameters );
+
+/*-----------------------------------------------------------*/
+
+/* The queue used by the queue send and queue receive tasks. */
+static QueueHandle_t xQueue = NULL;
+
+/* The semaphore (in this case binary) that is used by the FreeRTOS tick hook
+ * function and the event semaphore task.
+ */
+static SemaphoreHandle_t xEventSemaphore = NULL;
+
+/* The counters used by the various examples.  The usage is described in the
+ * comments at the top of this file.
+ */
+static volatile uint32_t ulCountOfTimerCallbackExecutions = 0;
+static volatile uint32_t ulCountOfItemsReceivedOnQueue = 0;
+static volatile uint32_t ulCountOfReceivedSemaphores = 0;
+
+/*-----------------------------------------------------------*/
+
+// Defined Tasks for traffic control
 static void prvTrafficFlowAdjustmentTask( void *pvParameters );
 static void prvTrafficGeneratorTask ( void *pvParameters );
 static void prvTrafficLightStateTask ( void *pvParameters );
@@ -33,7 +81,7 @@ static void prvSystemDisplayTask ( void *pvParameters );
 /*-----------------------------------------------------------*/
 
 // Queue Handler Definitions
-xQueueHandle xFlowAdjustmentTask = 0; //queue used to pass ADC value to task
+xQueueHandle xFlowAdjustmentQueue = 0; //queue used to pass ADC value to task
 xQueueHandle xSystemStateQueue = 0; //queue used to pass SystemState struct between tasks to share info of light state and traffic state
 
 /*-----------------------------------------------------------*/
@@ -43,7 +91,15 @@ int main(void)
 	can be done here if it was not done before main() was called. */
 	prvSetupHardware();
 
-	xTaskCreate( Manager_Task, "Manager", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
+	//Setup Queues
+	xFlowAdjustmentQueue = xQueueCreate(mainQUEUE_LENGTH, sizeof(uint16_t));
+	xSystemStateQueue = xQueueCreate(mainQUEUE_LENGTH, sizeof(SystemState));
+
+	// create traffic control tasks
+	xTaskCreate( prvTrafficFlowAdjustmentTask, "Traffic Flow Adjustment", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
+	xTaskCreate( prvTrafficGeneratorTask, "Traffic Generator", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
+	xTaskCreate( prvTrafficLightStateTask, "Traffic Light State", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
+	xTaskCreate( prvSystemDisplayTask, "System Display Update", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
 
 	//	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
