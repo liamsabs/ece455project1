@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "stm32f4_discovery.h"
+
 /* Kernel includes. */
 #include "stm32f4xx.h"
 #include "../FreeRTOS_Source/include/FreeRTOS.h"
@@ -11,80 +12,49 @@
 #include "../FreeRTOS_Source/include/task.h"
 #include "../FreeRTOS_Source/include/timers.h"
 
-
+/* src includes*/
+#include "middleware.h"
+#include "utilities.h"
+/*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
 
-/*
- * TODO: Implement this function for any hardware specific clock configuration
- * that was not already performed before main() was called.
- */
+// Middleware Setup
 static void prvSetupHardware( void );
 
-/*
- * The queue send and receive tasks as described in the comments at the top of
- * this file.
- */
-//static void Manager_Task( void *pvParameters );
+/*-----------------------------------------------------------*/
 
-xQueueHandle xQueue_handle = 0;
-
-void led_init( void );
-void led_data( unsigned char data );
-void adc_initialize( void );
-void traffic_lights( int traffic_flow );
-void status_toggle( void );
-uint16_t adc_convert( void );
-
-void Delay( void );
+// Defining Tasks
+static void prvTrafficFlowAdjustmentTask( void *pvParameters );
+static void prvTrafficGeneratorTask ( void *pvParameters );
+static void prvTrafficLightStateTask ( void *pvParameters );
+static void prvSystemDisplayTask ( void *pvParameters );
 
 /*-----------------------------------------------------------*/
 
+// Queue Handler Definitions
+xQueueHandle xFlowAdjustmentTask = 0; //queue used to pass ADC value to task
+xQueueHandle xSystemStateQueue = 0; //queue used to pass SystemState struct between tasks to share info of light state and traffic state
+
+/*-----------------------------------------------------------*/
 int main(void)
 {
 	/* Configure the system ready to run the demo.  The clock configuration
 	can be done here if it was not done before main() was called. */
 	prvSetupHardware();
 
-	
+	xTaskCreate( Manager_Task, "Manager", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
 
+	//	/* Start the tasks and timer running. */
+	vTaskStartScheduler();
 
-
-
-xTaskCreate( Manager_Task, "Manager", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
-
-//	/* Start the tasks and timer running. */
-vTaskStartScheduler();
-	uint16_t ADC_Value;
-	GPIOC->ODR |= GPIO_ODR_ODR_0;
-	GPIOC->ODR |= GPIO_ODR_ODR_1;
-	GPIOC->ODR |= GPIO_ODR_ODR_2;
-	GPIOC->ODR |= GPIO_ODR_ODR_6;
-	GPIOC->ODR |= GPIO_ODR_ODR_9;
-	for(int i = 0; i < 19; i++){
-
-				GPIO_ToggleBits(GPIOC, GPIO_Pin_8);
-				GPIO_ToggleBits(GPIOC, GPIO_Pin_8);
-				if((i+2) % 5 == 0) GPIO_ToggleBits(GPIOC, GPIO_Pin_6);
-	}
-
-	while(1){
-
-		ADC_SoftwareStartConv(ADC1);
-		while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC))
-		{
-			ADC_Value = ADC_GetConversionValue(ADC1);
-		}
-		printf("ADC Value: %d\n", (int)ADC_Value);
-	}
+	while(1){}
 
 	return 0;
 }
-
-
 /*-----------------------------------------------------------*/
 
-//static void Manager_Task( void *pvParameters )
+static void Manager_Task( void *pvParameters ){}
 //{
 //
 //}
@@ -93,13 +63,11 @@ vTaskStartScheduler();
 
 static void prvSetupHardware( void )
 {
-	 //http://www.freertos.org/RTOS-Cortex-M3-M4.html 
 	NVIC_SetPriorityGrouping( 0 ); // Ensure all priority bits are assigned as preemption priority bits.
 	GPIOInit(); // GPIO Initialization
 	ADCInit(); // ADC Initialization
 	SystemCoreClockUpdate(); // Update the system with the new clock frequency
 }
-
 /*-----------------------------------------------------------*/
 
 void vApplicationMallocFailedHook( void )

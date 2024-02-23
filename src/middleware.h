@@ -9,23 +9,21 @@
 #include "stm32f4xx.h"
 
 // Enum for state of traffic light
-typedef enum 
-{
-    LIGHT_RED_STATE,
-    LIGHT_YELLOW_STATE,
-    LIGHT_GREEN_STATE
+typedef enum {
+    RED,
+    YELLOW,
+    GREEN
 } LightState;
 
 // struct to hold state of whole system
-struct SystemState
-{
+struct SystemState {
     LightState lightState;
     uint32_t trafficState;
 };
 
 // Defines for Traffic Lights
-#define LIGHT_RED GPIO_ODR_ODR_0,
-#define LIGHT_YELLOW GPIO_ODR_ODR_1,
+#define LIGHT_RED GPIO_ODR_ODR_0
+#define LIGHT_YELLOW GPIO_ODR_ODR_1
 #define LIGHT_GREEN GPIO_ODR_ODR_2
 
 // Defines for Shift Register
@@ -36,9 +34,10 @@ struct SystemState
 //Defines for traffic management
 #define TRAFFIC_START_MASK 0x80000000U //used for loading to board
 
-static void GPIOInit( void );
-static void ADCInit( void );
-uint16_t readPot (void);
-void updateSystem (void);
+void ADCInit( void );
+void GPIOInit( void );
+uint16_t readPot ( void );
+void updateTrafficLight ( struct SystemState* state );
+void updateTraffic ( struct SystemState* state );
 
 #endif
