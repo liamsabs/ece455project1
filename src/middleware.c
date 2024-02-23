@@ -1,6 +1,6 @@
 #include "middleware.h"
 
-void ADCInit(void)
+void ADCInit (void)
 {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE); // Enables the ADC1 Clock
 	ADC_InitTypeDef ADCInit_Structure; // Initialize ADC Init Struct
@@ -10,7 +10,7 @@ void ADCInit(void)
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_13, 1, ADC_SampleTime_144Cycles); // Sets it to channel 0
 }
 
-void GPIOInit(void)
+void GPIOInit (void)
 {
     // Enable Clock for GPIOC
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
@@ -44,7 +44,7 @@ void GPIOInit(void)
 	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR9); // Pull-up Disabled
 }
 
-uint16_t readPot(void)
+uint16_t readPot (void)
 {
     uint16_t ADC_Value;
     ADC_SoftwareStartConv(ADC1); // Start ADC conversions
@@ -53,7 +53,7 @@ uint16_t readPot(void)
     return ADC_Value; // return value read by ADC 
 }
 
-void updateTrafficLight(struct SystemState* state)
+void updateTrafficLight (struct SystemState* state)
 {
     switch (state->lightState)
     {
@@ -69,7 +69,7 @@ void updateTrafficLight(struct SystemState* state)
     }   
 }
 
-void updateTraffic(struct SystemState* state)
+void updateTraffic (struct SystemState* state)
 {
     uint32_t trafficShiftMask = TRAFFIC_START_MASK;
     for(int i = 0; i < 19; i++)

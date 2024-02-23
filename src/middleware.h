@@ -9,16 +9,14 @@
 #include "stm32f4xx.h"
 
 // Enum for state of traffic light
-typedef enum 
-{
+typedef enum {
     RED,
     YELLOW,
     GREEN
 } LightState;
 
 // struct to hold state of whole system
-struct SystemState
-{
+struct SystemState {
     LightState lightState;
     uint32_t trafficState;
 };
