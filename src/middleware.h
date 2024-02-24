@@ -15,6 +15,14 @@ typedef enum {
     GREEN
 } LightState;
 
+// Enum for state of traffic heaviness
+typedef enum {
+    LIGHT_TRAFFIC,
+    MODERATE_TRAFFIC,
+    HIGH_TRAFFIC,
+    HEAVY_TRAFFIC
+} FlowState;
+
 // struct to hold state of whole system
 typedef struct {
     LightState lightState;
@@ -36,8 +44,10 @@ typedef struct {
 
 void ADCInit( void );
 void GPIOInit( void );
+void MiddleWareSetDefault ( void );
 uint16_t readPot ( void );
 void updateTrafficLight ( SystemState* state );
 void updateTraffic ( SystemState* state );
+void updateSystem (SystemState* state);
 
 #endif

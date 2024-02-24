@@ -53,6 +53,11 @@ uint16_t readPot (void)
     return ADC_Value; // return value read by ADC 
 }
 
+void MiddleWareSetDefault ( void )
+{
+    
+}
+
 void updateTrafficLight ( SystemState* state )
 {
     switch (state->lightState)
@@ -83,4 +88,10 @@ void updateTraffic ( SystemState* state )
         trafficShiftMask >>= 1; // shift traffic shift mask to right to 
     }
     GPIOC->ODR &= ~SR_CLK | ~SR_DATA; // set SR clock and data to low
-}    
+} 
+
+updateSystem (SystemState* state)
+{
+	updateTrafficLight(state);
+	updateTraffic(state);
+}

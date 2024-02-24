@@ -81,7 +81,7 @@ static void prvSystemDisplayTask ( void *pvParameters );
 /*-----------------------------------------------------------*/
 
 // Queue Handler Definitions
-xQueueHandle xFlowAdjustmentQueue = 0; //queue used to pass ADC value to task
+xQueueHandle xFlowAdjustmentQueue = 0; //queue used to pass FlowState between tasks
 xQueueHandle xSystemStateQueue = 0; //queue used to pass SystemState struct between tasks to share info of light state and traffic state
 
 /*-----------------------------------------------------------*/
@@ -91,17 +91,25 @@ int main(void)
 	can be done here if it was not done before main() was called. */
 	prvSetupHardware();
 
-	//Setup Queues
-	xFlowAdjustmentQueue = xQueueCreate(mainQUEUE_LENGTH, sizeof(uint16_t));
+	/* Setup Queues */
+	xFlowAdjustmentQueue = xQueueCreate(mainQUEUE_LENGTH, sizeof(FlowState));
 	xSystemStateQueue = xQueueCreate(mainQUEUE_LENGTH, sizeof(SystemState));
 
-	// create traffic control tasks
+	/* create traffic control tasks */
 	xTaskCreate( prvTrafficFlowAdjustmentTask, "Traffic Flow Adjustment", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
 	xTaskCreate( prvTrafficGeneratorTask, "Traffic Generator", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
 	xTaskCreate( prvTrafficLightStateTask, "Traffic Light State", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
 	xTaskCreate( prvSystemDisplayTask, "System Display Update", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
 
-	//	/* Start the tasks and timer running. */
+	/* Initialize Default System State */
+	SystemState initialSystemState;
+	initialSystemState.lightState = GREEN;
+	initialSystemState.trafficState = 0x00;
+
+	/* Initialize Default Traffic Flow State */
+	FlowState initialFlowState; 
+	
+	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
 
 	while(1){}
@@ -110,10 +118,68 @@ int main(void)
 }
 /*-----------------------------------------------------------*/
 
-static void Manager_Task( void *pvParameters ){}
-//{
-//
-//}
+/* Task Used to Read From Potentiometer and Send Flow State to Other tasks (one to generate traffic and one to control light changing) */
+static void prvTrafficFlowAdjustmentTask( void *pvParameters )
+{
+	uint16_t currentPotValue;
+	FlowState currentFlow;
+
+	while(1){
+	vTaskDelay(400); // Delay for 400 ticks or 200ms
+
+	xQueueReceive(xFlowAdjustmentQueue, &currentPotValue, portMAX_DELAY); // Receive value from queue to clear queue
+
+	currentPotValue = readPot(); // Read the potentiometer value
+
+    // Set currentFlow based on Potentiometer Value
+	if(currentPotValue <= POT_MAX/4) currentFlow = LIGHT_TRAFFIC;
+	else if(currentPotValue <= POT_MAX/2) currentFlow = MODERATE_TRAFFIC;
+	else if(currentPotValue <= 3*POT_MAX/4) currentFlow = HIGH_TRAFFIC;
+	else currentFlow = HEAVY_TRAFFIC;
+
+	xQueueSend(xFlowAdjustmentQueue, &currentFlow, 100); // Send flow rate value to queue
+	}
+}
+
+/* Task Used to Generate Traffic and Update SystemState.TrafficState to then pass to SystemDisplayTask */
+static void prvTrafficGeneratorTask ( void *pvParameters )
+{
+	SystemState systemStateToUpdate; // SystemState to update
+	FlowState currentFlow; // current flow 
+	srand((unsigned int)xTaskGetTickCount()); //seed random number generator with current number of ticks
+
+
+	while(1){
+		vTaskDelay(500); //Execute every 250ms
+
+		xQueueRecieve(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
+		xQueueRecieve(xFlowAdjustmentQueue, &systemStateToUpdate, 100); // Receive current System State to update
+
+		if(systemStateToUpdate.lightState == GREEN)
+		{
+
+
+		}
+
+
+	}
+
+}
+static void prvTrafficLightStateTask ( void *pvParameters ){}
+
+
+static void prvSystemDisplayTask ( void *pvParameters )
+{
+	SystemState systemStateToWrite; //initialize system state to recieve values from queue
+
+	while(1){
+		xQueueReceive(xSystemStateQueue, &systemStateToWrite, portMAX_DELAY); //recieve updated System State from queue
+
+		updateSystem(&systemStateToWrite); //update system (update lights and traffic)
+
+		xQueueSend(xSystemStateQueue, &systemStateToWrite, 0); // send boardstate back onto queue
+	}
+}
 
 /*-----------------------------------------------------------*/
 
