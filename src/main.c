@@ -114,6 +114,7 @@ TODO:
 
 void traffic_lights( float traffic_flow )
 {
+	
 	GPIOC->ODR |= GPIO_ODR_ODR_0; // example of how to output to the LED
 	GPIOC->ODR |= GPIO_ODR_ODR_1;
 	GPIOC->ODR |= GPIO_ODR_ODR_2;
