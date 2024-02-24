@@ -78,10 +78,6 @@ static void prvTrafficGeneratorTask ( void *pvParameters );
 static void prvTrafficLightStateTask ( void *pvParameters );
 static void prvSystemDisplayTask ( void *pvParameters );
 
-static void traffic_lights( float traffic_flow );
-static void delay( uint16_t delay_duration );
-
-
 /*-----------------------------------------------------------*/
 
 // Queue Handler Definitions
@@ -89,6 +85,7 @@ xQueueHandle xFlowAdjustmentQueue = 0; //queue used to pass FlowState between ta
 xQueueHandle xSystemStateQueue = 0; //queue used to pass SystemState struct between tasks to share info of light state and traffic state
 
 /*-----------------------------------------------------------*/
+
 int main(void)
 {
 	/* Configure the system ready to run the demo.  The clock configuration
@@ -120,6 +117,7 @@ int main(void)
 
 	return 0;
 }
+
 /*-----------------------------------------------------------*/
 
 /* Task Used to Read From Potentiometer and Send Flow State to Other tasks (one to generate traffic and one to control light changing) */
@@ -145,6 +143,8 @@ static void prvTrafficFlowAdjustmentTask( void *pvParameters )
 	}
 }
 
+/*-----------------------------------------------------------*/
+
 /* Task Used to Generate Traffic and Update SystemState.TrafficState to then pass to SystemDisplayTask */
 static void prvTrafficGeneratorTask ( void *pvParameters )
 {
@@ -169,8 +169,42 @@ static void prvTrafficGeneratorTask ( void *pvParameters )
 	}
 
 }
-static void prvTrafficLightStateTask ( void *pvParameters ){}
 
+/*-----------------------------------------------------------*/
+
+/*
+Updates: Changed traffic_flow to a float as I might be needing decimals, but that loses precision?
+Working on finding algorithms to proportionally relate two values
+Yellow light needs to be consistent so that's easy
+Created a basic delay function for once the actual light durations are figured out
+
+TODO:
+- create proportional value algorithm
+- Test delay function and dial in the proper times
+- Test traffic_lights function with ADC and potentiometer
+*/
+
+static void prvTrafficLightStateTask ( void *pvParameters )
+{
+	GPIOC->ODR |= GPIO_ODR_ODR_0; // example of how to output to the LED
+	GPIOC->ODR |= GPIO_ODR_ODR_1;
+	GPIOC->ODR |= GPIO_ODR_ODR_2;
+
+	GPIOC->ODR |= GPIO_ODR_ODR_6;
+	GPIOC->ODR |= GPIO_ODR_ODR_8;
+	GPIOC->ODR |= GPIO_ODR_ODR_9;
+
+	float min = 0;
+	float max = 3600;
+
+	float proportion_of_max = traffic_flow/max; // Am attempting to proportionally relate values
+
+	uint16_t red_duration = ; // This needs to be inversely proportional to traffic_flow
+	uint16_t yellow_duration = 4;
+	uint16_t green_duration = ;
+}
+
+/*-----------------------------------------------------------*/
 
 static void prvSystemDisplayTask ( void *pvParameters )
 {
@@ -193,58 +227,6 @@ static void prvSetupHardware( void )
 	GPIOInit(); // GPIO Initialization
 	ADCInit(); // ADC Initialization
 	SystemCoreClockUpdate(); // Update the system with the new clock frequency
-}
-
-/*-----------------------------------------------------------*/
-
-/*
-Updates: Changed traffic_flow to a float as I might be needing decimals, but that loses precision?
-Working on finding algorithms to proportionally relate two values
-Yellow light needs to be consistent so that's easy
-Created a basic delay function for once the actual light durations are figured out
-
-TODO:
-- create proportional value algorithm
-- Test delay function and dial in the proper times
-- Test traffic_lights function with ADC and potentiometer
-*/
-
-static void traffic_lights( float traffic_flow )
-{
-	
-	GPIOC->ODR |= GPIO_ODR_ODR_0; // example of how to output to the LED
-	GPIOC->ODR |= GPIO_ODR_ODR_1;
-	GPIOC->ODR |= GPIO_ODR_ODR_2;
-
-	GPIOC->ODR |= GPIO_ODR_ODR_6;
-	GPIOC->ODR |= GPIO_ODR_ODR_8;
-	GPIOC->ODR |= GPIO_ODR_ODR_9;
-
-	float min = 0;
-	float max = 3600;
-
-	float proportion_of_max = traffic_flow/max; // Am attempting to proportionally relate values
-
-	uint16_t red_duration = ; // This needs to be inversely proportional to traffic_flow
-	uint16_t yellow_duration = 4;
-	uint16_t green_duration = ;
-
-}
-
-/*-----------------------------------------------------------*/
-
-/*
-This function is meant to create a delay of a specific amount. 
-I will need to test to see exactly how long of a delay this creates, not sure
-exactly how best to do that but the goal is to use this for the traffic light 
-function and others. Will test this independently in the lab when I have the chance.
-*/
-
-static void delay( uint16_t delay_duration )
-{
-
-	for( uint16_t i = 0; i < 4800000*delay_duration; i++ );
-
 }
 
 /*-----------------------------------------------------------*/
