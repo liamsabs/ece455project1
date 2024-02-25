@@ -85,6 +85,7 @@ xQueueHandle xFlowAdjustmentQueue = 0; //queue used to pass FlowState between ta
 xQueueHandle xSystemStateQueue = 0; //queue used to pass SystemState struct between tasks to share info of light state and traffic state
 
 /*-----------------------------------------------------------*/
+
 int main(void)
 {
 	/* Configure the system ready to run the demo.  The clock configuration
@@ -116,6 +117,7 @@ int main(void)
 
 	return 0;
 }
+
 /*-----------------------------------------------------------*/
 
 /* Task Used to Read From Potentiometer and Send Flow State to Other tasks (one to generate traffic and one to control light changing) */
@@ -137,9 +139,20 @@ static void prvTrafficFlowAdjustmentTask( void *pvParameters )
 	else if(currentPotValue <= 3*POT_MAX/4) currentFlow = HIGH_TRAFFIC;
 	else currentFlow = HEAVY_TRAFFIC;
 
+	/*
+	The lab manual mentions values being "Directly Proportional" to the Pot value, and I'm just wondering if it expects something like the above,
+	or if they want us to have it more directly linked (i.e. _any_ change to the potentiometer will directly affect the traffic rate)
+	This would obviously be a lot harder to implement (and has actually been what I've bee struggling to get working the past little bit)
+	but thought it would be worth mentioning and considering. I really like the idea of how it's set up currently though, so we'll see.
+
+	If necessary, we can always make more options with smaller fractions, but whatever works works for me!
+	*/
+
 	xQueueSend(xFlowAdjustmentQueue, &currentFlow, 100); // Send flow rate value to queue
 	}
 }
+
+/*-----------------------------------------------------------*/
 
 /* Task Used to Generate Traffic and Update SystemState.TrafficState to then pass to SystemDisplayTask */
 static void prvTrafficGeneratorTask ( void *pvParameters )
@@ -209,8 +222,69 @@ static void prvTrafficGeneratorTask ( void *pvParameters )
 		xQueueSend(xSystemStateQueue, &systemStateToUpdate, 0); // Send out systemState struct to queue
 	}
 }
-static void prvTrafficLightStateTask ( void *pvParameters ){}
 
+/*-----------------------------------------------------------*/
+
+/*
+- Working on more accurately relating the green, red and traffic flow values
+- Yellow light has been defined at 2 seconds, can be changed easily but needs to be tested as well
+- Green and red values have been proportionally related
+- FreeRTOS tasks have been cleanly implemented
+- Need to make sure things work as I assume they do wrt delay functions
+
+TODO:
+- Dial in values of the red and green lights
+- Make sure the delay works properly
+- Test traffic_lights function with ADC and potentiometer
+*/
+
+static void prvTrafficLightStateTask ( void *pvParameters )
+{
+
+	SystemState systemStateToUpdate; //systemState to update
+	FlowState currentFlow; // Current traffic flow
+
+	uint16_t green_duration = 4000; // Duration of green light, also used for red light
+	uint16_t red_duration;
+
+	while(1)
+	{
+		xQueueRecieve(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
+		xQueueRecieve(xFlowAdjustmentQueue, &systemStateToUpdate, 100); // Receive current System State to update
+
+		if(systemStateToUpdate.lightState == GREEN)
+		{
+
+			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
+				red_duration = green_duration*2;
+			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
+				red_duration = 3*green_duration/2;
+			}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
+				red_duration = green_duration;
+			}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
+				red_duration = green_duration/2;
+			}
+
+			vTaskDelay(green_duration);
+			systemStateToUpdate.lightState = YELLOW;
+			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
+
+		}else if (systemStateToUpdate.lightState == YELLOW){
+
+			vTaskDelay(4000); // Stay Yellow for 2 seconds, consistent no matter the traffic state
+			systemStateToUpdate.lightState = RED;
+			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
+
+		}else if(systemStateToUpdate.lightState == RED){
+			vTaskDelay(red_duration);
+			systemStateToUpdate.lightState = YELLOW;
+			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
+		}
+	}
+
+}
+
+/*-----------------------------------------------------------*/
 
 static void prvSystemDisplayTask ( void *pvParameters )
 {
@@ -234,6 +308,7 @@ static void prvSetupHardware( void )
 	ADCInit(); // ADC Initialization
 	SystemCoreClockUpdate(); // Update the system with the new clock frequency
 }
+
 /*-----------------------------------------------------------*/
 
 void vApplicationMallocFailedHook( void )
