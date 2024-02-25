@@ -139,6 +139,15 @@ static void prvTrafficFlowAdjustmentTask( void *pvParameters )
 	else if(currentPotValue <= 3*POT_MAX/4) currentFlow = HIGH_TRAFFIC;
 	else currentFlow = HEAVY_TRAFFIC;
 
+	/*
+	The lab manual mentions values being "Directly Proportional" to the Pot value, and I'm just wondering if it expects something like the above,
+	or if they want us to have it more directly linked (i.e. _any_ change to the potentiometer will directly affect the traffic rate)
+	This would obviously be a lot harder to implement (and has actually been what I've bee struggling to get working the past little bit)
+	but thought it would be worth mentioning and considering. I really like the idea of how it's set up currently though, so we'll see.
+
+	If necessary, we can always make more options with smaller fractions, but whatever works works for me!
+	*/
+
 	xQueueSend(xFlowAdjustmentQueue, &currentFlow, 100); // Send flow rate value to queue
 	}
 }
@@ -173,35 +182,62 @@ static void prvTrafficGeneratorTask ( void *pvParameters )
 /*-----------------------------------------------------------*/
 
 /*
-Updates: Changed traffic_flow to a float as I might be needing decimals, but that loses precision?
-Working on finding algorithms to proportionally relate two values
-Yellow light needs to be consistent so that's easy
-Created a basic delay function for once the actual light durations are figured out
+- Working on more accurately relating the green, red and traffic flow values
+- Yellow light has been defined at 2 seconds, can be changed easily but needs to be tested as well
+- Green and red values have been proportionally related
+- FreeRTOS tasks have been cleanly implemented
+- Need to make sure things work as I assume they do wrt delay functions
 
 TODO:
-- create proportional value algorithm
-- Test delay function and dial in the proper times
+- Dial in values of the red and green lights
+- Make sure the delay works properly
 - Test traffic_lights function with ADC and potentiometer
 */
 
 static void prvTrafficLightStateTask ( void *pvParameters )
 {
-	GPIOC->ODR |= GPIO_ODR_ODR_0; // example of how to output to the LED
-	GPIOC->ODR |= GPIO_ODR_ODR_1;
-	GPIOC->ODR |= GPIO_ODR_ODR_2;
 
-	GPIOC->ODR |= GPIO_ODR_ODR_6;
-	GPIOC->ODR |= GPIO_ODR_ODR_8;
-	GPIOC->ODR |= GPIO_ODR_ODR_9;
+	SystemState systemStateToUpdate; //systemState to update
+	FlowState currentFlow; // Current traffic flow
 
-	float min = 0;
-	float max = 3600;
+	uint16_t green_duration = 4000; // Duration of green light, also used for red light
+	uint16_t red_duration;
 
-	float proportion_of_max = traffic_flow/max; // Am attempting to proportionally relate values
+	while(1)
+	{
+		xQueueRecieve(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
+		xQueueRecieve(xFlowAdjustmentQueue, &systemStateToUpdate, 100); // Receive current System State to update
 
-	uint16_t red_duration = ; // This needs to be inversely proportional to traffic_flow
-	uint16_t yellow_duration = 4;
-	uint16_t green_duration = ;
+		if(systemStateToUpdate.lightState == GREEN)
+		{
+
+			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
+				red_duration = green_duration*2;
+			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
+				red_duration = 3*green_duration/2;
+			}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
+				red_duration = green_duration;
+			}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
+				red_duration = green_duration/2;
+			}
+
+			vTaskDelay(green_duration);
+			systemStateToUpdate.lightState = YELLOW;
+			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
+
+		}else if (systemStateToUpdate.lightState == YELLOW){
+
+			vTaskDelay(4000); // Stay Yellow for 2 seconds, consistent no matter the traffic state
+			systemStateToUpdate.lightState = RED;
+			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
+
+		}else if(systemStateToUpdate.lightState == RED){
+			vTaskDelay(red_duration);
+			systemStateToUpdate.lightState = YELLOW;
+			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
+		}
+	}
+
 }
 
 /*-----------------------------------------------------------*/
