@@ -236,6 +236,7 @@ TODO:
 - Test traffic_lights function with ADC and potentiometer
 */
 
+
 static void prvTrafficLightStateTask ( void *pvParameters )
 {
 	SystemState systemStateToUpdate; //systemState to update
