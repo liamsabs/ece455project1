@@ -231,12 +231,13 @@ static void prvTrafficGeneratorTask ( void *pvParameters )
 - Yellow light has been defined at 2 seconds, can be changed easily but needs to be tested as well
 - Green and red values have been proportionally related
 - FreeRTOS tasks have been cleanly implemented
-- Need to make sure things work as I assume they do wrt delay functions
+- Dialed in red and green proportinal values
 
 TODO:
-- Dial in values of the red and green lights
-- Make sure the delay works properly
-- Test traffic_lights function with ADC and potentiometer
+- Implement FreeRTOS timers and delays
+- Rework code to work with those timers
+- Ensure task switching happens in the right time and the right way
+- Test all task functions together
 */
 
 
@@ -245,17 +246,41 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 	SystemState systemStateToUpdate; //systemState to update
 	FlowState currentFlow; // Current traffic flow
 
-	uint16_t green_duration = 4000; // Duration of green light, also used for red light
-	uint16_t red_duration;
+	uint16_t green_duration = 4000; // Duration of green light, also used for red light. Adjusted based on traffic status
+	uint16_t yellow_duration = 4000; // Constant
+	uint16_t red_duration; // Will be calculated based on green duration and traffic status
+
+	/*
+	
+	if(timer running){
+		if(green){
+			check traffic status and adjust necessary duration
+			wait for timer to hit green duration
+			switch to yellow
+		}else if(yellow){
+			wait for timer to hit yellow duration (constant)
+			switch to red
+		}else if(red){
+			check traffic status and adjust necessary duration
+			wait for timer to hit red duration
+			switch to green
+		}
+	}else{
+		same thing but starting the timer?
+		slightly unsure about this case
+	}
+	
+	*/
 
 	while(1)
 	{
 		xQueueRecieve(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
 		xQueueRecieve(xSystemStateQueue, &systemStateToUpdate, 100); // Receive current System State to update
 
-		if(systemStateToUpdate.lightState == GREEN)
+		if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
 		{
 
+			//Check traffic flow rate
 			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
 				green_duration /= 3; // Green light is 1/2 red light
 			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
@@ -267,17 +292,18 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 			}
 
 			vTaskDelay(green_duration);
-			systemStateToUpdate.lightState = YELLOW;
-			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
+			systemStateToUpdate.lightState = YELLOW; // Green -> Yellow -> Red -> Green etc
+			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 
 		}else if (systemStateToUpdate.lightState == YELLOW){
 
-			vTaskDelay(4000); // Stay Yellow for 2 seconds, consistent no matter the traffic state
-			systemStateToUpdate.lightState = RED;
-			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
+			vTaskDelay(yellow_duration); // Stay yellow for a constant amount of time
+			systemStateToUpdate.lightState = RED; // Green -> Yellow -> Red -> Green etc
+			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 
 		}else if(systemStateToUpdate.lightState == RED){
 
+			//Check traffic flow rate
 			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
 				red_duration = 2*green_duration/3; // Red light is 2/3 normal green light
 			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
@@ -289,8 +315,8 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 			}
 
 			vTaskDelay(red_duration);
-			systemStateToUpdate.lightState = YELLOW;
-			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
+			systemStateToUpdate.lightState = GREEN; // Green -> Yellow -> Red -> Green etc
+			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 		}
 	}
 }
