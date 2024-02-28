@@ -10,40 +10,6 @@ void ADCInit (void)
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_13, 1, ADC_SampleTime_144Cycles); // Sets it to channel 0
 }
 
-void TIM2Init (void)
-{
-	/* Enable clock for TIM2 peripheral */
-    // Relevant register: RCC->APB1ENR (Defined as TIM2CLK)
-    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-
-    /* Configure TIM2: buffer auto-reload, count up, stop on overflow,
-     * enable update events, interrupt on overflow only */
-    // Relevant register: TIM2->CR1 (Defined as TIM2Cont)
-    TIM2->CR1 = ((uint16_t)0x008C);
-
-    /* Set clock prescaler value */
-    TIM2->PSC = myTIM2_PRESCALER;
-    /* Set auto-reloaded delay */
-    TIM2->ARR = myTIM2_PERIOD;
-
-    /* Update timer registers */
-    // Relevant register: TIM2->EGR (Defined as TIM2Event)
-    TIM2->EGR = ((uint16_t)0x0001);
-
-    /* Assign TIM2 interrupt priority = 0 in NVIC */
-    // Relevant register: NVIC->IP[3], or use NVIC_SetPriority
-    NVIC_SetPriority(TIM2_IRQn, 0);
-
-    /* Enable TIM2 interrupts in NVIC */
-    // Relevant register: NVIC->ISER[0], or use NVIC_EnableIRQ
-    NVIC_EnableIRQ(TIM2_IRQn);
-
-    /* Enable update interrupt generation */
-    TIM2->DIER |= TIM_DIER_UIE;
-    // Relevant register: TIM2->DIER (Defined as TIM2IntEn)
-    //TIM2->CR1 |= TIM_CR1_CEN;
-}
-
 void GPIOInit (void)
 {
     // Enable Clock for GPIOC

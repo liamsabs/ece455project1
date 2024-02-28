@@ -42,13 +42,8 @@ typedef struct {
 //Defines for traffic management
 #define TRAFFIC_START_MASK 0x80000000U //used for loading to board
 
-/* Clock prescaler for TIM2 timer: no prescaling */
-#define myTIM2_PRESCALER ((uint16_t)0x0000)
-/* Maximum possible setting for overflow */
-#define myTIM2_PERIOD ((uint32_t)0xFFFFFFFF)
 
 void ADCInit( void );
-void TIM2Init( void );
 void GPIOInit( void );
 void MiddleWareSetDefault ( void );
 uint16_t readPot ( void );
