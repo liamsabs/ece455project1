@@ -42,6 +42,7 @@ typedef struct {
 //Defines for traffic management
 #define TRAFFIC_START_MASK 0x80000000U //used for loading to board
 
+
 void ADCInit( void );
 void GPIOInit( void );
 void MiddleWareSetDefault ( void );

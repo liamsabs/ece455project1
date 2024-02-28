@@ -236,6 +236,7 @@ TODO:
 - Test traffic_lights function with ADC and potentiometer
 */
 
+
 static void prvTrafficLightStateTask ( void *pvParameters )
 {
 	SystemState systemStateToUpdate; //systemState to update
@@ -253,13 +254,13 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 		{
 
 			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
-				red_duration = green_duration*2;
+				green_duration /= 3; // Green light is 1/2 red light
 			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
-				red_duration = 3*green_duration/2;
+				green_duration = 2*green_duration/5; // Green light close but slightly shorter than red
 			}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
-				red_duration = green_duration;
+				green_duration = 3*green_duration/5; // Green light slightly longer than red
 			}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
-				red_duration = green_duration/2;
+				green_duration = 2*green_duration/3; // Green light is 2 times red light
 			}
 
 			vTaskDelay(green_duration);
@@ -273,6 +274,17 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
 
 		}else if(systemStateToUpdate.lightState == RED){
+
+			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
+				red_duration = 2*green_duration/3; // Red light is 2/3 normal green light
+			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
+				red_duration = 3*green_duration/5; //Red light is 3/5 normal green light
+			}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
+				red_duration = 2*green_duration/5; //Red light is 2/5 normal green
+			}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
+				red_duration = green_duration/3; // Red light is 1/3 normal green light
+			}
+
 			vTaskDelay(red_duration);
 			systemStateToUpdate.lightState = YELLOW;
 			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
