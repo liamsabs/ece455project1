@@ -108,8 +108,8 @@ int main(void)
 	initialSystemState.trafficState = 0x00;
 
 	/* Initialize Default Traffic Flow State */
-	FlowState initialFlowState; 
-	
+	FlowState initialFlowState;
+
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
 
@@ -157,16 +157,18 @@ static void prvTrafficFlowAdjustmentTask( void *pvParameters )
 static void prvTrafficGeneratorTask ( void *pvParameters )
 {
 	SystemState systemStateToUpdate; // SystemState to update
-	FlowState currentFlow; // current flow 
+	FlowState currentFlow; // current flow
 	srand((unsigned int)xTaskGetTickCount()); //seed random number generator with current number of ticks
 	uint32_t tempTrafficState;
+	uint32_t beforeIntersectionTemp; //temporary variables to deal with before intersection bits
+	uint32_t afterIntersectionTemp; //temporary variables to deal with after intersection bits
 	uint16_t randomNumber; //random number generated
 	uint16_t probabilityUpperBound; //upper bound for computing task probability
 	bool advanceCar; //boolean value on whether or not to add another car to intersection when shifting
 
 	while(1){
-		xQueueRecieve(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
-		xQueueRecieve(xSystemStateQueue, &systemStateToUpdate, 100); // Receive current System State to update
+		xQueueReceive(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
+		xQueueReceive(xSystemStateQueue, &systemStateToUpdate, 100); // Receive current System State to update
 
 		//choose the upper bound for the probability calculation
 		switch(currentFlow){
@@ -189,25 +191,26 @@ static void prvTrafficGeneratorTask ( void *pvParameters )
         tempTrafficState = systemStateToUpdate.trafficState; // tempTrafficState will be used as a temp to manipulate
 
 		switch(systemStateToUpdate.lightState){ // Shift traffic based on state of the light
-			
-			case LIGHT_GREEN: // if light is green
+
+			case GREEN: // if light is green
 				tempTrafficState >>= 1; //shift whole traffic to right
 			break;
-			case LIGHT_RED: /* If Light is red or yellow */
-			case LIGHT_YELLOW:
-				uint32_t beforeIntersectionTemp; uint32_t afterIntersectionTemp; //temporary variables to deal with before and after intersection
-				beforeIntersectionTemp = tempTrafficState >> 1; //apply shift 
+			case RED: /* If Light is red or yellow */
+			case YELLOW:
+
+				beforeIntersectionTemp = tempTrafficState >> 1; //apply shift
 				beforeIntersectionTemp &= MASK_BEFORE_INTERSECTION; //& with before intersection mask to isolate 8 MSB
 				uint32_t trafficBuildupMask = MASK_INITIAL_TRAFFIC_BUILDUP; //use cascading mask to correct leading cars
 
 				while(trafficBuildupMask & tempTrafficState){ //iterate down traffic until there is an empty spot
 					beforeIntersectionTemp |= trafficBuildupMask; //or mask with temp to maintain leading cars
 					trafficBuildupMask <<= 1; //shift mask for next space
-				} 
+				}
 
 				afterIntersectionTemp = tempTrafficState & MASK_AFTER_INTERSECTION; //isolate after intersection bits
 				afterIntersectionTemp >>= 1; //shift to the right
 				tempTrafficState = beforeIntersectionTemp | afterIntersectionTemp; // combine pre and post traffic
+
 			break;
 		}
 
@@ -293,7 +296,6 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 }
 
 /*-----------------------------------------------------------*/
-
 static void prvSystemDisplayTask ( void *pvParameters )
 {
 	SystemState systemStateToWrite; //initialize system state to recieve values from queue
