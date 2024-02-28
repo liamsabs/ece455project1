@@ -127,8 +127,6 @@ static void prvTrafficFlowAdjustmentTask( void *pvParameters )
 	FlowState currentFlow;
 
 	while(1){
-	vTaskDelay(400); // Delay for 400 ticks or 200ms
-
 	xQueueReceive(xFlowAdjustmentQueue, &currentPotValue, portMAX_DELAY); // Receive value from queue to clear queue
 
 	currentPotValue = readPot(); // Read the potentiometer value
@@ -149,6 +147,7 @@ static void prvTrafficFlowAdjustmentTask( void *pvParameters )
 	*/
 
 	xQueueSend(xFlowAdjustmentQueue, &currentFlow, 100); // Send flow rate value to queue
+	vTaskDelay(pdMS_TO_TICKS(500));
 	}
 }
 
@@ -166,8 +165,6 @@ static void prvTrafficGeneratorTask ( void *pvParameters )
 	bool advanceCar; //boolean value on whether or not to add another car to intersection when shifting
 
 	while(1){
-		vTaskDelay(500); //Execute every 250ms
-
 		xQueueRecieve(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
 		xQueueRecieve(xSystemStateQueue, &systemStateToUpdate, 100); // Receive current System State to update
 
@@ -220,6 +217,7 @@ static void prvTrafficGeneratorTask ( void *pvParameters )
 
 		xQueueSend(xFlowAdjustmentQueue, &currentFlow, 0); // Re-send Flow State to queue
 		xQueueSend(xSystemStateQueue, &systemStateToUpdate, 0); // Send out systemState struct to queue
+		vTaskDelay(pdMS_TO_TICKS(500));
 	}
 }
 
@@ -240,7 +238,6 @@ TODO:
 
 static void prvTrafficLightStateTask ( void *pvParameters )
 {
-
 	SystemState systemStateToUpdate; //systemState to update
 	FlowState currentFlow; // Current traffic flow
 
@@ -250,7 +247,7 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 	while(1)
 	{
 		xQueueRecieve(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
-		xQueueRecieve(xFlowAdjustmentQueue, &systemStateToUpdate, 100); // Receive current System State to update
+		xQueueRecieve(xSystemStateQueue, &systemStateToUpdate, 100); // Receive current System State to update
 
 		if(systemStateToUpdate.lightState == GREEN)
 		{
@@ -281,7 +278,6 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100);
 		}
 	}
-
 }
 
 /*-----------------------------------------------------------*/
@@ -296,6 +292,8 @@ static void prvSystemDisplayTask ( void *pvParameters )
 		updateSystem(&systemStateToWrite); //update system (update lights and traffic)
 
 		xQueueSend(xSystemStateQueue, &systemStateToWrite, 0); // send boardstate back onto queue
+
+		vTaskDelay(pdMS_TO_TICKS(500));
 	}
 }
 
