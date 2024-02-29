@@ -86,6 +86,11 @@ xQueueHandle xSystemStateQueue = 0; //queue used to pass SystemState struct betw
 
 /*-----------------------------------------------------------*/
 
+// Timer Handler
+xTimerHandle xTrafficLightTimerHandler = 0;
+
+/*-------------------------------------------------------------*/
+
 int main(void)
 {
 	/* Configure the system ready to run the demo.  The clock configuration
@@ -336,6 +341,54 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 			}
 		}
 	}
+}
+
+/*-----------------------------------------------------------*/
+
+/* Task Working as Callback function for Timer Dealing with Light Change */
+static void vTrafficLightTimerCallback ( xTimerHandle timerHandler )
+{
+	SystemState systemStateToUpdate;
+	xQueueRecieve (xSystemStateQueue, &systemStateToUpdate, 100); //recieve from queue
+
+		/* change the light to the next state */
+		switch (systemStateToUpdate.lightState){
+			case GREEN:
+				systemStateToUpdate.lightState = YELLOW;
+			break;
+			case YELLOW:
+				systemStateToUpdate.lightState = RED;
+			break;
+			case RED:
+				systemStateToUpdate.lightState = GREEN;
+			break;
+		}
+
+	xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); //send updated light to queue
+}
+
+/*-----------------------------------------------------------*/
+
+/* Task Working as Callback function for Timer Dealing with Light Change */
+static void vTrafficLightTimerCallback ( xTimerHandle timerHandler )
+{
+	SystemState systemStateToUpdate;
+	xQueueRecieve (xSystemStateQueue, &systemStateToUpdate, 100); //recieve from queue
+
+		/* change the light to the next state */
+		switch (systemStateToUpdate.lightState){
+			case GREEN:
+				systemStateToUpdate.lightState = YELLOW;
+			break;
+			case YELLOW:
+				systemStateToUpdate.lightState = RED;
+			break;
+			case RED:
+				systemStateToUpdate.lightState = GREEN;
+			break;
+		}
+
+	xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); //send updated light to queue
 }
 
 /*-----------------------------------------------------------*/
