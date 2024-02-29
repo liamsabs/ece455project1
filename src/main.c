@@ -50,7 +50,7 @@ static void prvSetupHardware( void );
  */
 static void prvQueueReceiveTask( void *pvParameters );
 static void prvQueueSendTask( void *pvParameters );
-static void vExampleTimerCallback( TimerHandle_t xTimer );
+static void vTrafficLightTimerCallback ( xTimerHandle timerHandler );
 static void prvEventSemaphoreTask( void *pvParameters );
 
 /*-----------------------------------------------------------*/
@@ -113,7 +113,7 @@ int main(void)
 						pdMS_TO_TICKS(1000), //default value to be changed with specific values
 						pdFALSE, // Does not automatically reset
 						(void *) 0, // We only have one timer, so this is used for testing and changing the timer
-						TimerCallbackFunction_t pxCallbackFunction); // Fill in the name of the callback function
+						vTrafficLightTimerCallback); // Fill in the name of the callback function
 
 	/* Initialize Default System State */
 	SystemState initialSystemState;
@@ -263,27 +263,20 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 	uint16_t yellow_duration = 4000; // Constant
 	uint16_t red_duration; // Will be calculated based on green duration and traffic status
 
-	/*
-	
-	if(timer running){
-		if(green){
-			check traffic status and adjust necessary duration
-			wait for timer to hit green duration
-			switch to yellow
-		}else if(yellow){
-			wait for timer to hit yellow duration (constant)
-			switch to red
-		}else if(red){
-			check traffic status and adjust necessary duration
-			wait for timer to hit red duration
-			switch to green
-		}
-	}else{
-		same thing but starting the timer?
-		slightly unsure about this case
+	//Check traffic flow rate
+	if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
+		red_duration = 2*green_duration/3; // Red light is 2/3 normal green light
+		green_duration /= 3; // Green light is 1/2 red light
+	}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
+		red_duration = 3*green_duration/5; //Red light is 3/5 normal green light
+		green_duration = 2*green_duration/5; // Green light close but slightly shorter than red
+	}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
+		red_duration = 2*green_duration/5; //Red light is 2/5 normal green
+		green_duration = 3*green_duration/5; // Green light slightly longer than red
+	}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
+		red_duration = green_duration/3; // Red light is 1/3 normal green light
+		green_duration = 2*green_duration/3; // Green light is 2 times red light
 	}
-	
-	*/
 
 	while(1)
 	{
@@ -295,49 +288,40 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 			if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
 			{
 
-				//Check traffic flow rate
-				if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
-					green_duration /= 3; // Green light is 1/2 red light
-				}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
-					green_duration = 2*green_duration/5; // Green light close but slightly shorter than red
-				}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
-					green_duration = 3*green_duration/5; // Green light slightly longer than red
-				}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
-					green_duration = 2*green_duration/3; // Green light is 2 times red light
-				}
-
 				xTimerChangePeriod(Light_Timer, pdMS_TO_TICKS(green_duration), 100);
 				xTimerStart(Light_Timer, 100);
-
-				// systemStateToUpdate.lightState = YELLOW; // Green -> Yellow -> Red -> Green etc
-				// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 
 			}else if (systemStateToUpdate.lightState == YELLOW){
 
 				xTimerChangePeriod(Light_Timer, pdMS_TO_TICKS(yellow_duration), 100);
 				xTimerStart(Light_Timer, 100);
-				
-				// systemStateToUpdate.lightState = RED; // Green -> Yellow -> Red -> Green etc
-				// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 
 			}else if(systemStateToUpdate.lightState == RED){
-
-				//Check traffic flow rate
-				if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
-					red_duration = 2*green_duration/3; // Red light is 2/3 normal green light
-				}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
-					red_duration = 3*green_duration/5; //Red light is 3/5 normal green light
-				}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
-					red_duration = 2*green_duration/5; //Red light is 2/5 normal green
-				}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
-					red_duration = green_duration/3; // Red light is 1/3 normal green light
-				}
 
 				xTimerChangePeriod(Light_Timer, pdMS_TO_TICKS(red_duration), 100);
 				xTimerStart(Light_Timer, 100);
 
-				// systemStateToUpdate.lightState = GREEN; // Green -> Yellow -> Red -> Green etc
-				// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
+			}
+		}else{
+			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
+				if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+				{
+					if(xTimerGetPeriod( Light_Timer ) != green_duration) xTimerChangePeriod(Light_Timer, green_duration, 100);
+				
+				}else if (systemStateToUpdate.lightState == YELLOW){
+
+				}else if(systemStateToUpdate.lightState == RED){
+
+				}
+			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
+				red_duration = 3*green_duration/5; //Red light is 3/5 normal green light
+				green_duration = 2*green_duration/5; // Green light close but slightly shorter than red
+			}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
+				red_duration = 2*green_duration/5; //Red light is 2/5 normal green
+				green_duration = 3*green_duration/5; // Green light slightly longer than red
+			}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
+				red_duration = green_duration/3; // Red light is 1/3 normal green light
+				green_duration = 2*green_duration/3; // Green light is 2 times red light
 			}
 		}
 	}
