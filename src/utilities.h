@@ -33,7 +33,5 @@ typedef uint8_t bool;
 #define HIGH_TRAFFIC_DELAY
 #define HEAVY_TRAFFIC_DELAY
 
-void updateTrafficGreen ( SystemState* state );
-void updateTrafficRedOrYellow (SystemState* state);
 
 #endif

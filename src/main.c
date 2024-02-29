@@ -307,21 +307,39 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 				if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
 				{
 					if(xTimerGetPeriod( Light_Timer ) != green_duration) xTimerChangePeriod(Light_Timer, green_duration, 100);
-				
 				}else if (systemStateToUpdate.lightState == YELLOW){
-
+					if(xTimerGetPeriod( Light_Timer ) != yellow_duration) xTimerChangePeriod(Light_Timer, yellow_duration, 100);
 				}else if(systemStateToUpdate.lightState == RED){
-
+					if(xTimerGetPeriod( Light_Timer ) != red_duration) xTimerChangePeriod(Light_Timer, red_duration, 100);
 				}
 			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
-				red_duration = 3*green_duration/5; //Red light is 3/5 normal green light
-				green_duration = 2*green_duration/5; // Green light close but slightly shorter than red
+				if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+				{
+					if(xTimerGetPeriod( Light_Timer ) != green_duration) xTimerChangePeriod(Light_Timer, green_duration, 100);
+				}else if (systemStateToUpdate.lightState == YELLOW){
+					if(xTimerGetPeriod( Light_Timer ) != yellow_duration) xTimerChangePeriod(Light_Timer, yellow_duration, 100);
+				}else if(systemStateToUpdate.lightState == RED){
+					if(xTimerGetPeriod( Light_Timer ) != red_duration) xTimerChangePeriod(Light_Timer, red_duration, 100);
+				}
 			}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
-				red_duration = 2*green_duration/5; //Red light is 2/5 normal green
+				if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+				{
+					if(xTimerGetPeriod( Light_Timer ) != green_duration) xTimerChangePeriod(Light_Timer, green_duration, 100);
+				}else if (systemStateToUpdate.lightState == YELLOW){
+					if(xTimerGetPeriod( Light_Timer ) != yellow_duration) xTimerChangePeriod(Light_Timer, yellow_duration, 100);
+				}else if(systemStateToUpdate.lightState == RED){
+					if(xTimerGetPeriod( Light_Timer ) != red_duration) xTimerChangePeriod(Light_Timer, red_duration, 100);
+				}red_duration = 2*green_duration/5; //Red light is 2/5 normal green
 				green_duration = 3*green_duration/5; // Green light slightly longer than red
 			}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
-				red_duration = green_duration/3; // Red light is 1/3 normal green light
-				green_duration = 2*green_duration/3; // Green light is 2 times red light
+				if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+				{
+					if(xTimerGetPeriod( Light_Timer ) != green_duration) xTimerChangePeriod(Light_Timer, green_duration, 100);
+				}else if (systemStateToUpdate.lightState == YELLOW){
+					if(xTimerGetPeriod( Light_Timer ) != yellow_duration) xTimerChangePeriod(Light_Timer, yellow_duration, 100);
+				}else if(systemStateToUpdate.lightState == RED){
+					if(xTimerGetPeriod( Light_Timer ) != red_duration) xTimerChangePeriod(Light_Timer, red_duration, 100);
+				}
 			}
 		}
 	}

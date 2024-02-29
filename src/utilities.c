@@ -1,10 +1,3 @@
 #include "utilities.h"
+#include <stdint.h>
 
-void updateTrafficGreen ( SystemState* state, bool nextCar){
-
-
-
-}
-void updateTrafficRedOrYellow (SystemState* state, bool nextCar){
-
-}
