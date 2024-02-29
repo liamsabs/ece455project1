@@ -86,11 +86,6 @@ xQueueHandle xSystemStateQueue = 0; //queue used to pass SystemState struct betw
 
 /*-----------------------------------------------------------*/
 
-// generate timer handler
-xTimerHandle xTrafficLightTimerHandler = 0;
-
-/*-------------------------------------------------------------*/
-
 int main(void)
 {
 	/* Configure the system ready to run the demo.  The clock configuration
@@ -98,12 +93,8 @@ int main(void)
 	prvSetupHardware();
 
 	/* Setup Queues */
-	xSystemStateQueue = xQueueCreate(mainQUEUE_LENGTH, sizeof(SystemState));
 	xFlowAdjustmentQueue = xQueueCreate(mainQUEUE_LENGTH, sizeof(FlowState));
-
-	/* Register Queues for Debugging*/
-	vQueueAddToRegistry(xFlowAdjustmentQueue, "Flow Adjustment Queue");
-	vQueueAddToRegistry(xSystemStateQueue, "System State Queue");
+	xSystemStateQueue = xQueueCreate(mainQUEUE_LENGTH, sizeof(SystemState));
 
 	/* create traffic control tasks */
 	xTaskCreate( prvTrafficFlowAdjustmentTask, "Traffic Flow Adjustment", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
@@ -111,17 +102,14 @@ int main(void)
 	xTaskCreate( prvTrafficLightStateTask, "Traffic Light State", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
 	xTaskCreate( prvSystemDisplayTask, "System Display Update", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
 
+
 	/* Initialize Default System State */
 	SystemState initialSystemState;
 	initialSystemState.lightState = GREEN;
 	initialSystemState.trafficState = 0x00;
 
 	/* Initialize Default Traffic Flow State */
-	FlowState initialFlowState = readPot();
-
-	/* Send Initial Flow State and System State to Queue*/
-	xQueueSend(xSystemStateQueue, &initialSystemState, 100);
-	xQueueSend(xFlowAdjustmentQueue, &initialFlowState, 100);
+	FlowState initialFlowState;
 
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
@@ -129,6 +117,14 @@ int main(void)
 	while(1){}
 
 	return 0;
+}
+
+/*-----------------------------------------------------------*/
+
+static void vExampleTimerCallback( TimerHandle_t xTimer )
+{
+	/* Optionally do something if the pxTimer parameter is NULL. */
+    configASSERT( xTimer );
 }
 
 /*-----------------------------------------------------------*/
