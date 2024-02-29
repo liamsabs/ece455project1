@@ -121,14 +121,6 @@ int main(void)
 
 /*-----------------------------------------------------------*/
 
-static void vExampleTimerCallback( TimerHandle_t xTimer )
-{
-	/* Optionally do something if the pxTimer parameter is NULL. */
-    configASSERT( xTimer );
-}
-
-/*-----------------------------------------------------------*/
-
 /* Task Used to Read From Potentiometer and Send Flow State to Other tasks (one to generate traffic and one to control light changing) */
 static void prvTrafficFlowAdjustmentTask( void *pvParameters )
 {
