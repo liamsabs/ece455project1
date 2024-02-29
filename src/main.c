@@ -102,6 +102,13 @@ int main(void)
 	xTaskCreate( prvTrafficLightStateTask, "Traffic Light State", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
 	xTaskCreate( prvSystemDisplayTask, "System Display Update", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL);
 
+	/* Create traffic light timer */
+	TimerHandle_t Light_Timer = xTimerCreate
+						("Light Timer", 
+						pdMS_TO_TICKS(1000), //default value to be changed with specific values
+						pdFALSE, // Does not automatically reset
+						(void *) 0, // We only have one timer, so this is used for testing and changing the timer
+						TimerCallbackFunction_t pxCallbackFunction); // Fill in the name of the callback function
 
 	/* Initialize Default System State */
 	SystemState initialSystemState;
@@ -278,6 +285,7 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 		xQueueRecieve(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
 		xQueueRecieve(xSystemStateQueue, &systemStateToUpdate, 100); // Receive current System State to update
 
+		
 		if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
 		{
 
@@ -292,15 +300,27 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 				green_duration = 2*green_duration/3; // Green light is 2 times red light
 			}
 
-			vTaskDelay(green_duration);
-			systemStateToUpdate.lightState = YELLOW; // Green -> Yellow -> Red -> Green etc
-			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
+			TimerHandle_t Light_Timer = xTimerCreate
+						("Light Timer", 
+						pdMS_TO_TICKS(green_duration), 
+						pdFALSE, 
+						void *const pvTimerID, 
+						TimerCallbackFunction_t pxCallbackFunction);
+
+			// systemStateToUpdate.lightState = YELLOW; // Green -> Yellow -> Red -> Green etc
+			// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 
 		}else if (systemStateToUpdate.lightState == YELLOW){
 
-			vTaskDelay(yellow_duration); // Stay yellow for a constant amount of time
-			systemStateToUpdate.lightState = RED; // Green -> Yellow -> Red -> Green etc
-			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
+			TimerHandle_t Light_Timer = xTimerCreate
+						("Light Timer", 
+						pdMS_TO_TICKS(yellow_duration), 
+						pdFALSE, 
+						void *const pvTimerID, 
+						TimerCallbackFunction_t pxCallbackFunction);
+			
+			// systemStateToUpdate.lightState = RED; // Green -> Yellow -> Red -> Green etc
+			// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 
 		}else if(systemStateToUpdate.lightState == RED){
 
@@ -315,9 +335,15 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 				red_duration = green_duration/3; // Red light is 1/3 normal green light
 			}
 
-			vTaskDelay(red_duration);
-			systemStateToUpdate.lightState = GREEN; // Green -> Yellow -> Red -> Green etc
-			xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
+			TimerHandle_t Light_Timer = xTimerCreate
+						("Light Timer", 
+						pdMS_TO_TICKS(red_duration), 
+						pdFALSE, 
+						void *const pvTimerID, 
+						TimerCallbackFunction_t pxCallbackFunction);
+
+			// systemStateToUpdate.lightState = GREEN; // Green -> Yellow -> Red -> Green etc
+			// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 		}
 	}
 }
