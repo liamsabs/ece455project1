@@ -285,65 +285,55 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 		xQueueRecieve(xFlowAdjustmentQueue, &currentFlow, 100); // Receive current Flow State
 		xQueueRecieve(xSystemStateQueue, &systemStateToUpdate, 100); // Receive current System State to update
 
-		
-		if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+		if( xTimerIsTimerActive( Light_Timer ) == pdFALSE )
 		{
+			if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+			{
 
-			//Check traffic flow rate
-			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
-				green_duration /= 3; // Green light is 1/2 red light
-			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
-				green_duration = 2*green_duration/5; // Green light close but slightly shorter than red
-			}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
-				green_duration = 3*green_duration/5; // Green light slightly longer than red
-			}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
-				green_duration = 2*green_duration/3; // Green light is 2 times red light
+				//Check traffic flow rate
+				if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
+					green_duration /= 3; // Green light is 1/2 red light
+				}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
+					green_duration = 2*green_duration/5; // Green light close but slightly shorter than red
+				}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
+					green_duration = 3*green_duration/5; // Green light slightly longer than red
+				}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
+					green_duration = 2*green_duration/3; // Green light is 2 times red light
+				}
+
+				xTimerChangePeriod(Light_Timer, pdMS_TO_TICKS(green_duration), 100);
+				xTimerStart(Light_Timer, 100);
+
+				// systemStateToUpdate.lightState = YELLOW; // Green -> Yellow -> Red -> Green etc
+				// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
+
+			}else if (systemStateToUpdate.lightState == YELLOW){
+
+				xTimerChangePeriod(Light_Timer, pdMS_TO_TICKS(yellow_duration), 100);
+				xTimerStart(Light_Timer, 100);
+				
+				// systemStateToUpdate.lightState = RED; // Green -> Yellow -> Red -> Green etc
+				// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
+
+			}else if(systemStateToUpdate.lightState == RED){
+
+				//Check traffic flow rate
+				if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
+					red_duration = 2*green_duration/3; // Red light is 2/3 normal green light
+				}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
+					red_duration = 3*green_duration/5; //Red light is 3/5 normal green light
+				}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
+					red_duration = 2*green_duration/5; //Red light is 2/5 normal green
+				}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
+					red_duration = green_duration/3; // Red light is 1/3 normal green light
+				}
+
+				xTimerChangePeriod(Light_Timer, pdMS_TO_TICKS(red_duration), 100);
+				xTimerStart(Light_Timer, 100);
+
+				// systemStateToUpdate.lightState = GREEN; // Green -> Yellow -> Red -> Green etc
+				// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 			}
-
-			TimerHandle_t Light_Timer = xTimerCreate
-						("Light Timer", 
-						pdMS_TO_TICKS(green_duration), 
-						pdFALSE, 
-						void *const pvTimerID, 
-						TimerCallbackFunction_t pxCallbackFunction);
-
-			// systemStateToUpdate.lightState = YELLOW; // Green -> Yellow -> Red -> Green etc
-			// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
-
-		}else if (systemStateToUpdate.lightState == YELLOW){
-
-			TimerHandle_t Light_Timer = xTimerCreate
-						("Light Timer", 
-						pdMS_TO_TICKS(yellow_duration), 
-						pdFALSE, 
-						void *const pvTimerID, 
-						TimerCallbackFunction_t pxCallbackFunction);
-			
-			// systemStateToUpdate.lightState = RED; // Green -> Yellow -> Red -> Green etc
-			// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
-
-		}else if(systemStateToUpdate.lightState == RED){
-
-			//Check traffic flow rate
-			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
-				red_duration = 2*green_duration/3; // Red light is 2/3 normal green light
-			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
-				red_duration = 3*green_duration/5; //Red light is 3/5 normal green light
-			}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
-				red_duration = 2*green_duration/5; //Red light is 2/5 normal green
-			}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
-				red_duration = green_duration/3; // Red light is 1/3 normal green light
-			}
-
-			TimerHandle_t Light_Timer = xTimerCreate
-						("Light Timer", 
-						pdMS_TO_TICKS(red_duration), 
-						pdFALSE, 
-						void *const pvTimerID, 
-						TimerCallbackFunction_t pxCallbackFunction);
-
-			// systemStateToUpdate.lightState = GREEN; // Green -> Yellow -> Red -> Green etc
-			// xQueueSend(xSystemStateQueue, &systemStateToUpdate, 100); // Update the system state with new light state
 		}
 	}
 }
