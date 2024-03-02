@@ -303,8 +303,19 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 
 			}
 		}else{
+
+			/* 
+			This case takes care of updating the timer while it's active
+			If the traffic levels have been changed and the timer is currently 
+			still running, update the period to the correct value.
+
+			This is extremely repetitive and an area to improve in terms of 
+			both style and efficiency. A purpose-built function would have been
+			better, but time was limited at this point.
+			*/
+
 			if(systemStateToUpdate.trafficState == LIGHT_TRAFFIC){
-				if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+				if(systemStateToUpdate.lightState == GREEN) 
 				{
 					if(xTimerGetPeriod( Light_Timer ) != green_duration) xTimerChangePeriod(Light_Timer, green_duration, 100);
 				}else if (systemStateToUpdate.lightState == YELLOW){
@@ -313,7 +324,7 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 					if(xTimerGetPeriod( Light_Timer ) != red_duration) xTimerChangePeriod(Light_Timer, red_duration, 100);
 				}
 			}else if(systemStateToUpdate.trafficState == MODERATE_TRAFFIC){
-				if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+				if(systemStateToUpdate.lightState == GREEN) 
 				{
 					if(xTimerGetPeriod( Light_Timer ) != green_duration) xTimerChangePeriod(Light_Timer, green_duration, 100);
 				}else if (systemStateToUpdate.lightState == YELLOW){
@@ -322,17 +333,16 @@ static void prvTrafficLightStateTask ( void *pvParameters )
 					if(xTimerGetPeriod( Light_Timer ) != red_duration) xTimerChangePeriod(Light_Timer, red_duration, 100);
 				}
 			}else if(systemStateToUpdate.trafficState == HIGH_TRAFFIC){
-				if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+				if(systemStateToUpdate.lightState == GREEN) 
 				{
 					if(xTimerGetPeriod( Light_Timer ) != green_duration) xTimerChangePeriod(Light_Timer, green_duration, 100);
 				}else if (systemStateToUpdate.lightState == YELLOW){
 					if(xTimerGetPeriod( Light_Timer ) != yellow_duration) xTimerChangePeriod(Light_Timer, yellow_duration, 100);
 				}else if(systemStateToUpdate.lightState == RED){
 					if(xTimerGetPeriod( Light_Timer ) != red_duration) xTimerChangePeriod(Light_Timer, red_duration, 100);
-				}red_duration = 2*green_duration/5; //Red light is 2/5 normal green
-				green_duration = 3*green_duration/5; // Green light slightly longer than red
+				}
 			}else if(systemStateToUpdate.trafficState == HEAVY_TRAFFIC){
-				if(systemStateToUpdate.lightState == GREEN) // If the light state is green, check this to properly implement the timer
+				if(systemStateToUpdate.lightState == GREEN) 
 				{
 					if(xTimerGetPeriod( Light_Timer ) != green_duration) xTimerChangePeriod(Light_Timer, green_duration, 100);
 				}else if (systemStateToUpdate.lightState == YELLOW){
